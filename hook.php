@@ -335,6 +335,10 @@ function plugin_singlesignon_uninstall() {
       $query = "DROP TABLE `glpi_plugin_singlesignon_providers`";
       $DB->query($query) or die("error deleting glpi_plugin_singlesignon_providers");
    }
+   if (sso_TableExists("glpi_plugin_singlesignon_providers_users")) {
+      $query = "DROP TABLE `glpi_plugin_singlesignon_providers_users`";
+      $DB->query($query) or die("error deleting glpi_plugin_singlesignon_providers_users");
+   }
 
    return true;
 }

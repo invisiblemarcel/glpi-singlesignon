@@ -1188,8 +1188,8 @@ class PluginSinglesignonProvider extends CommonDBTM {
       if ($email && $use_email) {
          $login = $email;
       } else {
-         $login_fields = ['userPrincipalName', 'login', 'username', 'id', 'name', 'displayName'];
-
+         // Keycloak and Zitadel answer with preferred_username and not username
+         $login_fields = ['userPrincipalName', 'login', 'username', 'preferred_username', 'id', 'name', 'displayName'];
          foreach ($login_fields as $field) {
             if (isset($resource_array[$field]) && is_string($resource_array[$field])) {
                $login = $resource_array[$field];
@@ -1273,14 +1273,31 @@ class PluginSinglesignonProvider extends CommonDBTM {
             $tokenAPI = base_convert(hash('sha256', time() . mt_rand()), 16, 36);
             $tokenPersonnel = base_convert(hash('sha256', time() . mt_rand()), 16, 36);
 
-            $splitname = $this->fields['split_name'];
-            $firstLastArray = ($splitname) ? preg_split('/ /', $resource_array['name'], 2) : preg_split('/ /', $resource_array['displayName'], 2);
+            $displayName = ['', ''];
+            // Split DisplayName into given_name and family_name if split_name = true or one of the fields is not set
+            if ($this->fields['split_name'] || !isset($resource_array['given_name']) || !isset($resource_array['family_name'])) {
+               // Zitadel and Keycloak use name and not displayName for the Display Name
+               if (isset($resource_array['name'])) {
+                  $displayName = $resource_array['name'];
+               }
+               else if (isset($resource_array['displayName'])) {
+                  $displayName = $resource_array['displayName'];
+               }
+               else {
+                  $displayName = 'Error getting name';
+               }
+               $displayName = preg_split('/ /', $displayName, 2);
+            }
+            // If split_name = false and given_name and family_name are set, then use them
+            else {
+               $displayName = [$resource_array['given_name'], $resource_array['family_name']];
+            }
 
             $userPost = [
                'name' => $login,
                'add' => 1,
-               'realname' => $firstLastArray[1],
-               'firstname' => $firstLastArray[0],
+               'realname' => $displayName[1],
+               'firstname' => $displayName[0],
                'api_token' => $tokenAPI,
                'personal_token' => $tokenPersonnel,
                'is_active' => 1
